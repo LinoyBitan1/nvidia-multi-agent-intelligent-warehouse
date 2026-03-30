@@ -1,0 +1,34 @@
+{{- $fullname := include "wosa.fullname" . -}}
+{{- $ns := include "wosa.namespace" . -}}
+
+================================================================================
+  WOSA - Multi-Agent Intelligent Warehouse
+================================================================================
+
+{{- if .Values.route.enabled }}
+
+Application URL:
+  https://$(oc get route {{ $fullname }} -n {{ $ns }} -o jsonpath='{.spec.host}')
+
+{{- else }}
+
+No Route created. Port-forward to access nginx:
+  oc port-forward svc/{{ include "wosa.nginx.name" . }} 8080:{{ .Values.nginx.service.port }} -n {{ $ns }}
+  Then open http://localhost:8080
+
+{{- end }}
+
+Verify pods:
+  oc get pods -n {{ $ns }}
+
+Backend health check:
+{{- if .Values.route.enabled }}
+  ROUTE=$(oc get route {{ $fullname }} -n {{ $ns }} -o jsonpath='{.spec.host}')
+  curl -k https://${ROUTE}{{ .Values.backend.healthCheck.path }}
+{{- else }}
+  oc port-forward svc/{{ include "wosa.backend.name" . }} 8001:{{ .Values.backend.port }} -n {{ $ns }}
+  curl http://localhost:8001{{ .Values.backend.healthCheck.path }}
+{{- end }}
+
+View logs:
+  oc logs -l app.kubernetes.io/component=backend -n {{ $ns }} --tail=50

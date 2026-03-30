@@ -1,0 +1,393 @@
+# WOSA Helm Chart Values
+#
+# Required overrides (must be set at deploy time):
+#   secrets.nvidiaApiKey
+
+# -- Global Settings
+nameOverride: ""
+fullnameOverride: ""
+namespace: ""
+storageClass: ""
+imagePullSecrets: []
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+serviceAccount:
+  name: wosa-sa
+
+# -- Application Images
+image:
+  repository: image-registry.openshift-image-registry.svc:5000/wosa/wosa-backend
+  tag: "latest"
+  pullPolicy: Always
+
+# -- Backend
+backend:
+  replicas: 1
+  port: 8001
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2"
+      memory: "4Gi"
+  env:
+    environment: production
+    # LLM
+    llmNimUrl: "https://integrate.api.nvidia.com/v1"
+    llmModel: "nvidia/llama-3.3-nemotron-super-49b-v1"
+    llmTemperature: "0.1"
+    llmMaxTokens: "2000"
+    llmTopP: "1.0"
+    llmFrequencyPenalty: "0.0"
+    llmPresencePenalty: "0.0"
+    llmClientTimeout: "120"
+    llmCacheEnabled: "true"
+    llmCacheTtlSeconds: "300"
+    # Embedding
+    embeddingNimUrl: "https://integrate.api.nvidia.com/v1"
+    embeddingModel: "nvidia/nv-embedqa-e5-v5"
+    # NeMo document processing
+    nemoRetrieverUrl: "https://integrate.api.nvidia.com/v1"
+    nemoOcrUrl: "https://integrate.api.nvidia.com/v1"
+    nemoParseUrl: "https://integrate.api.nvidia.com/v1"
+    llamaNanoVlUrl: "https://integrate.api.nvidia.com/v1"
+    # Guardrails
+    railApiUrl: "https://integrate.api.nvidia.com/v1"
+    guardrailsTimeout: "10"
+    guardrailsUseApi: "false"
+    useNemoGuardrailsSdk: "false"
+    guardrailsModel: "nvidia/llama-3.3-nemotron-super-49b-v1"
+    # LLM Judge
+    llama70bTimeout: "120"
+    # Service discovery
+    dbPort: "5432"
+    redisPort: "6379"
+    redisDb: "0"
+    milvusPort: "19530"
+    milvusUser: "root"
+    milvusPassword: "Milvus"
+    milvusCollectionName: "warehouse_docs"
+    # Application
+    corsOrigins: ""
+    maxRequestSize: "10485760"
+    maxUploadSize: "52428800"
+    maxPdfPagesToProcess: "5"
+    maxPdfPagesToExtract: "10"
+    defaultAdminPassword: "changeme"
+  healthCheck:
+    path: /api/v1/health
+    initialDelaySeconds: 30
+    periodSeconds: 10
+
+# -- Security Contexts (restricted-v2 compatible)
+securityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+# -- Secrets
+secrets:
+  create: true
+  nvidiaApiKey: ""          # REQUIRED
+  embeddingApiKey: ""       # defaults to nvidiaApiKey
+  railApiKey: ""            # defaults to nvidiaApiKey
+  nemoRetrieverApiKey: ""   # defaults to nvidiaApiKey
+  nemoOcrApiKey: ""         # defaults to nvidiaApiKey
+  nemoParseApiKey: ""       # defaults to nvidiaApiKey
+  llamaNanoVlApiKey: ""     # defaults to nvidiaApiKey
+  defaultUserPassword: "changeme"
+  jwtSecretKey: "your-strong-random-secret-minimum-32-characters-change-this-in-production"
+  postgresUser: "warehouse"
+  postgresPassword: "changeme"
+  postgresDb: "warehouse"
+  minioAccessKey: "minioadmin"
+  minioSecretKey: "minioadmin"
+
+# -- Infrastructure Services
+
+# -- TimescaleDB
+timescaledb:
+  enabled: true
+  replicas: 1
+  image:
+    repository: timescale/timescaledb
+    tag: "2.15.2-pg16"
+    pullPolicy: IfNotPresent
+  port: 5432
+  persistence:
+    enabled: true
+    size: 10Gi
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "1"
+      memory: "2Gi"
+
+# -- Redis
+redis:
+  enabled: true
+  replicas: 1
+  image:
+    repository: redis
+    tag: "7"
+    pullPolicy: IfNotPresent
+  port: 6379
+  persistence:
+    enabled: true
+    size: 2Gi
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+# -- Kafka
+kafka:
+  enabled: true
+  replicas: 1
+  image:
+    repository: apache/kafka
+    tag: "3.7.0"
+    pullPolicy: IfNotPresent
+  port: 9092
+  persistence:
+    enabled: true
+    size: 5Gi
+  clusterId: "MkU3OEVBNTcwNTJENDM2Qk"
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "1"
+      memory: "2Gi"
+
+# -- etcd
+etcd:
+  enabled: true
+  replicas: 1
+  image:
+    repository: quay.io/coreos/etcd
+    tag: "v3.5.9"
+    pullPolicy: IfNotPresent
+  port: 2379
+  persistence:
+    enabled: true
+    size: 1Gi
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+# -- MinIO
+minio:
+  enabled: true
+  replicas: 1
+  image:
+    repository: minio/minio
+    tag: "RELEASE.2024-03-15T01-07-19Z"
+    pullPolicy: IfNotPresent
+  service:
+    apiPort: 9000
+    consolePort: 9001
+  persistence:
+    enabled: true
+    size: 10Gi
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "1"
+      memory: "2Gi"
+
+# -- Milvus
+milvus:
+  enabled: true
+  replicas: 1
+  image:
+    repository: milvusdb/milvus
+    tag: "v2.4.3"
+    pullPolicy: IfNotPresent
+  port: 19530
+  httpPort: 9091
+  persistence:
+    enabled: true
+    size: 10Gi
+  # GPU acceleration (requires NVIDIA GPU node)
+  gpu:
+    enabled: false
+    deviceId: "0"
+    tolerations: []
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2"
+      memory: "4Gi"
+
+# -- Frontend & Routing
+
+# -- Route
+route:
+  enabled: true
+  # host: ""  # leave empty for auto-generated hostname
+  tls:
+    enabled: true
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  timeout: "5m"
+  annotations: {}
+
+# -- Frontend
+frontend:
+  enabled: true
+  replicas: 1
+  image:
+    repository: image-registry.openshift-image-registry.svc:5000/wosa/wosa-frontend
+    tag: "latest"
+    pullPolicy: Always
+  service:
+    port: 8080
+  healthCheck:
+    path: /
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "128Mi"
+
+# -- Nginx
+nginx:
+  enabled: true
+  replicas: 1
+  image:
+    repository: nginxinc/nginx-unprivileged
+    tag: 1.25-alpine
+    pullPolicy: IfNotPresent
+  service:
+    port: 8080
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "128Mi"
+
+# -- Network Policy
+networkPolicy:
+  enabled: true
+
+# -- Helm Hook Jobs
+
+# -- DB init Job (post-install/post-upgrade Helm hook)
+# SQL scripts are passed at deploy time via --set-file in deploy-openshift.sh.
+dbInit:
+  enabled: true
+  scripts: {}  # populated via --set-file at deploy time
+
+# -- User init Job (post-install Helm hook)
+# Runs scripts/setup/create_default_users.py to create admin + test user.
+userInit:
+  enabled: true
+
+# -- Demo data Job (post-install only Helm hook)
+# Runs scripts/data/quick_demo_data.py to seed inventory, tasks, incidents.
+# Set enabled: false to skip (e.g. production with real data).
+demoData:
+  enabled: false
+
+# -- Demand history Job (post-install only Helm hook)
+# Runs scripts/data/generate_historical_demand.py to seed 180 days of demand
+# data for the Forecasting page.
+demoDemand:
+  enabled: false
+
+# -- Monitoring
+monitoring:
+  enabled: false
+
+  alertmanager:
+    enabled: true
+    groupWait: 10s
+    groupInterval: 10s
+    repeatInterval: 1h
+    smtp:
+      smarthost: "localhost:587"
+      from: "alerts@warehouse-assistant.com"
+    receivers:
+      critical:
+        email: "admin@warehouse-assistant.com"
+        webhookUrl: "http://localhost:5001/critical"
+        subject: "[CRITICAL] Warehouse Alert: {{ .GroupLabels.alertname }}"
+      warning:
+        email: "operations@warehouse-assistant.com"
+        webhookUrl: "http://localhost:5001/warning"
+        subject: "[WARNING] Warehouse Alert: {{ .GroupLabels.alertname }}"
+      default:
+        webhookUrl: "http://localhost:5001/"
+
+  alerts:
+    highMemoryThresholdGiB: 3.2
+
+  exporters:
+    postgres:
+      image:
+        repository: prometheuscommunity/postgres-exporter
+        tag: "latest"
+    redis:
+      image:
+        repository: oliver006/redis_exporter
+        tag: "latest"
+
+  serviceMonitor:
+    interval: 30s
+    scrapeTimeout: 10s
+    metricsPath: /api/v1/metrics
+
+  prometheusRules:
+    enabled: true
+
+  grafana:
+    enabled: true
+    adminPassword: "changeme"
+    createOperatorGroup: true
+    channel: "v5"
+    catalogSource: community-operators
+    catalogSourceNamespace: openshift-marketplace
+    replicas: 1
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "256Mi"
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+    datasource:
+      url: "https://thanos-querier.openshift-monitoring.svc.cluster.local:9091"
+    dashboards:
+      enabled: true
+      files: {}
