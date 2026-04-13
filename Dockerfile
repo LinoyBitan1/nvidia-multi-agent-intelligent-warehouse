@@ -4,12 +4,13 @@
 # =============================================================================
 # Frontend Build Stage
 # =============================================================================
-FROM node:20-alpine AS frontend-builder
+FROM node:20.19.0-alpine AS frontend-builder
 
 WORKDIR /app/src/ui/web
 
-# Copy package files
+# Copy package files (include .npmrc so npm ci matches lockfile; legacy-peer-deps)
 COPY src/ui/web/package*.json ./
+COPY src/ui/web/.npmrc ./
 
 # Install dependencies (including devDependencies for build)
 RUN npm ci
