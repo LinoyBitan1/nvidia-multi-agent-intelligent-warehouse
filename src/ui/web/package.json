@@ -48,10 +48,7 @@
     "postinstall": "node -e \"const fs=require('fs'),path=require('path');const esmDir=path.join('node_modules','fast-equals','dist','esm');if(!fs.existsSync(esmDir)){fs.mkdirSync(esmDir,{recursive:true});fs.symlinkSync(path.join('..','es','index.mjs'),path.join(esmDir,'index.mjs'),'file');}\""
   },
   "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
+    "extends": ["react-app"]
   },
   "jest": {
     "transformIgnorePatterns": [
@@ -88,6 +85,7 @@
     ]
   },
   "devDependencies": {
+    "eslint": "^8.57.0",
     "@craco/craco": "^7.1.0",
     "@types/react-copy-to-clipboard": "^5.0.7",
     "http-proxy-middleware": "^3.0.5",
@@ -98,6 +96,7 @@
     "@babel/preset-env": "^7.23.0"
   },
   "overrides": {
+    "eslint": "^8.57.0",
     "webpack-dev-server": "^5.2.1",
     "serialize-javascript": "^6.0.2",
     "postcss": "^8.5.6",
