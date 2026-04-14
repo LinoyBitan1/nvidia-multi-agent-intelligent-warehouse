@@ -304,7 +304,7 @@ Deploy NIMs on your own infrastructure for data privacy, cost control, and custo
    ```bash
    # Example: Deploy LLM NIM on port 8000
    docker run --gpus all -p 8000:8000 \
-     nvcr.io/nvidia/nim/llama-3.3-nemotron-super-49b:latest
+     nvcr.io/nim/nvidia/llama-3.3-nemotron-super-49b-v1.5:latest
    
    # Example: Deploy Embedding NIM on port 8001
    docker run --gpus all -p 8001:8001 \
