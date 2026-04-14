@@ -27,6 +27,8 @@ ARG BUILD_TIME=unknown
 ENV REACT_APP_VERSION=$VERSION
 ENV REACT_APP_GIT_SHA=$GIT_SHA
 ENV REACT_APP_BUILD_TIME=$BUILD_TIME
+# CI=true treats ESLint warnings as errors; lint runs in CI test job, not here
+ENV DISABLE_ESLINT_PLUGIN=true
 
 # Build the frontend
 RUN npm run build
