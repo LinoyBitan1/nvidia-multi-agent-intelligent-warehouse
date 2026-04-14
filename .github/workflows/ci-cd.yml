@@ -229,10 +229,11 @@ jobs:
         fetch-depth: 0
         token: ${{ secrets.GITHUB_TOKEN }}
     
+    # semantic-release requires Node ^22.14.0 (see semantic-release docs/support/node-version.md)
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: '22'
         cache: 'npm'
         cache-dependency-path: package-lock.json
     
