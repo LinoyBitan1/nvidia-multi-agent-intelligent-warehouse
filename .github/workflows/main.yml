@@ -35,7 +35,7 @@ concurrency:
 jobs:
   # Full Stack Deployment - Following DEPLOYMENT.md 12-Step Procedure
   deploy-and-test:
-    runs-on: arc-runners-org-nvidia-ai-bp-1-gpu
+    runs-on: ubuntu-latest
 
     steps:
       # Step 1: Clone repository
