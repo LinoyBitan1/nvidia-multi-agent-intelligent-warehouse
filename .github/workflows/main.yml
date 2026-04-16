@@ -90,9 +90,26 @@ jobs:
           echo "NVIDIA_API_KEY=${NVIDIA_API_KEY}" >> deploy/compose/.env
           echo "LLM_NIM_URL=https://integrate.api.nvidia.com/v1" >> deploy/compose/.env
 
-          cp deploy/compose/.env .env
-
           echo "✅ .env file configured at deploy/compose/.env"
+
+          # scripts/setup/dev_up.sh sources and edits .env in the repository root (cwd), not deploy/compose/.env
+          cp deploy/compose/.env .env
+          echo "✅ Root .env synced for dev_up.sh"
+
+      # Prerequisite: Authenticate Docker to NGC registry for private NIM image pulls
+      - name: "Authenticate Docker to nvcr.io"
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+        run: |
+          if [ -z "${NVIDIA_API_KEY}" ]; then
+            echo "❌ Missing required secret: NVIDIA_API_KEY"
+            echo "   Set NVIDIA_API_KEY to an NGC registry API key with Catalog/registry access."
+            exit 1
+          fi
+
+          echo "Logging into nvcr.io..."
+          echo "${NVIDIA_API_KEY}" | docker login nvcr.io -u '$oauthtoken' --password-stdin
+          echo "✅ Docker authenticated to nvcr.io"
 
       # Step 5: Start infrastructure services
       - name: "Step 5: Start infrastructure services"
