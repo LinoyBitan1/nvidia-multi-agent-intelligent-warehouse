@@ -90,6 +90,8 @@ jobs:
           echo "NVIDIA_API_KEY=${NVIDIA_API_KEY}" >> deploy/compose/.env
           echo "LLM_NIM_URL=https://integrate.api.nvidia.com/v1" >> deploy/compose/.env
 
+          cp deploy/compose/.env .env
+
           echo "✅ .env file configured at deploy/compose/.env"
 
       # Step 5: Start infrastructure services
