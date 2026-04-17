@@ -18,6 +18,7 @@ name: Multi-Agent-Intelligent-Warehouse deployment test
 # - Health checks: /health, /api/v1/health, /api/v1/health/simple
 # - Access points: Frontend (3001), API (8001), Docs, Metrics
 # - Integration tests
+# - MAIW UI tests: pytest -m maiw (blueprint-github-test image, --maiw-playground-url)
 
 on:
   push:
@@ -122,6 +123,8 @@ jobs:
           # Wait for services to be ready
           echo "Waiting for services to be ready..."
           sleep 30
+          echo "Docker containers (docker ps --all):"
+          docker ps --all
           echo "✅ Infrastructure services started"
 
       # Step 6: Run database migrations
@@ -288,6 +291,54 @@ jobs:
 
           echo "✅ Access point verification completed!"
 
+      - name: "Post-deploy: Run MAIW pytest (pytest -m maiw)"
+        env:
+          TEST_DOCKER_PULL_KEY: ${{ secrets.TEST_DOCKER_PULL_KEY }}
+        run: |
+          set -e
+          echo "Waiting for MAIW frontend on http://127.0.0.1:3001 (required for Playwright UI tests)..."
+          max_retries=30
+          retry_count=0
+          until curl -f -s -o /dev/null http://127.0.0.1:3001/ || [ $retry_count -eq $max_retries ]; do
+            echo "Attempt $((retry_count + 1))/$max_retries: frontend not ready..."
+            sleep 2
+            retry_count=$((retry_count + 1))
+          done
+          if [ $retry_count -eq $max_retries ]; then
+            echo "❌ MAIW frontend not reachable on port 3001"
+            exit 1
+          fi
+          echo "✅ MAIW frontend is ready"
+
+          echo "Authenticating to nvcr.io for blueprint-github-test image pull..."
+          if [ -z "${TEST_DOCKER_PULL_KEY}" ]; then
+            echo "❌ Missing required secret: TEST_DOCKER_PULL_KEY"
+            exit 1
+          fi
+          echo "${TEST_DOCKER_PULL_KEY}" | docker login nvcr.io -u '$oauthtoken' --password-stdin
+
+          echo "Pulling blueprint-github-test image for pytest..."
+          TEST_IMAGE="nvcr.io/rw983xdqtcdp/auto_test_team/blueprint-github-test-image:latest"
+          docker pull "${TEST_IMAGE}"
+
+          mkdir -p "${GITHUB_WORKSPACE}/reports"
+          echo "Running: pytest -m maiw --maiw-playground-url=http://127.0.0.1:3001"
+          docker run --net=host --rm \
+            -v "${GITHUB_WORKSPACE}/reports:/reports" \
+            "${TEST_IMAGE}" \
+            pytest -m maiw --maiw-playground-url=http://127.0.0.1:3001 --disable-warnings --self-contained-html --html=/reports/maiw_test_report.html
+
+          echo "✅ MAIW pytest completed"
+
+      - name: Upload MAIW pytest HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maiw-pytest-report
+          path: reports/maiw_test_report.html
+          if-no-files-found: ignore
+          retention-days: 30
+
       - name: Upload production checklist
         if: always()
         uses: actions/upload-artifact@v4
@@ -325,3 +376,4 @@ jobs:
             <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}</a></p>
             
             <p>Thanks!</p>      
+
