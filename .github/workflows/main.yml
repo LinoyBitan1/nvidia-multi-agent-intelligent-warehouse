@@ -114,6 +114,29 @@ jobs:
           echo "${NVIDIA_API_KEY}" | docker login nvcr.io -u '$oauthtoken' --password-stdin
           echo "✅ Docker authenticated to nvcr.io"
 
+      # Inject NGC_API_KEY for llm-nim (CI only; keeps deploy/compose/docker-compose.dev.yaml unchanged in repo)
+      - name: "Patch docker-compose.dev.yaml (llm-nim NGC_API_KEY)"
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          path = Path("deploy/compose/docker-compose.dev.yaml")
+          text = path.read_text()
+          # Use $$ in workflow YAML so the runner passes a single $ to Python (compose variable syntax)
+          anchor = "      - NVIDIA_API_KEY=$${NVIDIA_API_KEY:-}\n      - CUDA_VISIBLE_DEVICES"
+          insert = (
+              "      - NVIDIA_API_KEY=$${NVIDIA_API_KEY:-}\n"
+              "      - NGC_API_KEY=$${NVIDIA_API_KEY:-}\n"
+              "      - CUDA_VISIBLE_DEVICES"
+          )
+          if "NGC_API_KEY" in text:
+              print("NGC_API_KEY already present; skipping patch")
+          elif anchor not in text:
+              raise SystemExit("patch anchor not found in docker-compose.dev.yaml (llm-nim environment)")
+          else:
+              path.write_text(text.replace(anchor, insert, 1))
+              print("Patched llm-nim: NGC_API_KEY=$${NVIDIA_API_KEY:-}")
+          PY
+
       # Step 5: Start infrastructure services
       - name: "Step 5: Start infrastructure services"
         run: |
