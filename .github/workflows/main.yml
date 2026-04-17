@@ -121,9 +121,10 @@ jobs:
           from pathlib import Path
           path = Path("deploy/compose/docker-compose.dev.yaml")
           text = path.read_text().replace("\r\n", "\n")
-          # $$ in workflow YAML → single $ in Python (compose ${VAR} syntax)
-          marker = "      - NVIDIA_API_KEY=$${NVIDIA_API_KEY:-}\n"
-          ngc = "      - NGC_API_KEY=$${NVIDIA_API_KEY:-}\n"
+          # Avoid $ in workflow YAML (heredoc may leave $$ literal); build compose ${...} with chr(36)
+          d = chr(36)
+          marker = "      - NVIDIA_API_KEY=" + d + "{NVIDIA_API_KEY:-}\n"
+          ngc = "      - NGC_API_KEY=" + d + "{NVIDIA_API_KEY:-}\n"
           if "NGC_API_KEY" in text:
               print("NGC_API_KEY already present; skipping patch")
           elif marker not in text:
