@@ -162,6 +162,9 @@ jobs:
             elapsed=$((now_ts - start_ts))
             if [ "$elapsed" -ge "$TIMEOUT_SEC" ]; then
               echo "❌ Timeout: wosa-llm-nim did not become ready within ${TIMEOUT_SEC}s (20 min)"
+              echo ""
+              echo "Docker logs (wosa-llm-nim, last 2000 lines):"
+              docker logs --tail 2000 wosa-llm-nim 2>&1 || echo "(could not read logs: container missing or stopped)"
               exit 1
             fi
 
