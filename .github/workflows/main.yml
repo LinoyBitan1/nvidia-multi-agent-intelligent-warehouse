@@ -126,8 +126,8 @@ jobs:
           sleep 120
           echo "Docker containers (docker ps --all):"
           docker ps --all
-          echo "Docker logs (compose-backend):"
-          docker logs compose-backend
+          echo "Docker logs (wosa-backend):"
+          docker logs wosa-backend
           echo "✅ Infrastructure services started"
 
       # Step 6: Ensure wosa-llm-nim (LLM NIM) is ready
@@ -379,10 +379,10 @@ jobs:
           PYTEST_EXIT=$?
           set -e
 
-          echo "Docker logs (compose-frontend):"
-          docker logs compose-frontend 2>&1 || true
-          echo "Docker logs (compose-backend):"
-          docker logs compose-backend 2>&1 || true
+          echo "Docker logs (wosa-frontend):"
+          docker logs wosa-frontend 2>&1 || true
+          echo "Docker logs (wosa-backend):"
+          docker logs wosa-backend 2>&1 || true
 
           if [ "$PYTEST_EXIT" -eq 0 ]; then
             echo "✅ MAIW pytest completed"
