@@ -120,21 +120,17 @@ jobs:
           python3 <<'PY'
           from pathlib import Path
           path = Path("deploy/compose/docker-compose.dev.yaml")
-          text = path.read_text()
-          # Use $$ in workflow YAML so the runner passes a single $ to Python (compose variable syntax)
-          anchor = "      - NVIDIA_API_KEY=$${NVIDIA_API_KEY:-}\n      - CUDA_VISIBLE_DEVICES"
-          insert = (
-              "      - NVIDIA_API_KEY=$${NVIDIA_API_KEY:-}\n"
-              "      - NGC_API_KEY=$${NVIDIA_API_KEY:-}\n"
-              "      - CUDA_VISIBLE_DEVICES"
-          )
+          text = path.read_text().replace("\r\n", "\n")
+          # $$ in workflow YAML → single $ in Python (compose ${VAR} syntax)
+          marker = "      - NVIDIA_API_KEY=$${NVIDIA_API_KEY:-}\n"
+          ngc = "      - NGC_API_KEY=$${NVIDIA_API_KEY:-}\n"
           if "NGC_API_KEY" in text:
               print("NGC_API_KEY already present; skipping patch")
-          elif anchor not in text:
-              raise SystemExit("patch anchor not found in docker-compose.dev.yaml (llm-nim environment)")
+          elif marker not in text:
+              raise SystemExit("patch anchor not found: expected llm-nim line " + repr(marker.strip()))
           else:
-              path.write_text(text.replace(anchor, insert, 1))
-              print("Patched llm-nim: NGC_API_KEY=$${NVIDIA_API_KEY:-}")
+              path.write_text(text.replace(marker, marker + ngc, 1))
+              print("Patched llm-nim: inserted NGC_API_KEY after NVIDIA_API_KEY")
           PY
 
       # Step 5: Start infrastructure services
