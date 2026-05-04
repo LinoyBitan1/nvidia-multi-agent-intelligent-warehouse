@@ -1,0 +1,66 @@
+# Recommended values overlay for deploying WOSA on Red Hat OpenShift.
+#
+# Usage:
+#   helm install wosa ./deploy/helm/wosa \
+#     -n wosa --create-namespace \
+#     -f ./deploy/helm/wosa/values-openshift.yaml \
+#     --set secrets.nvidiaApiKey="$NVIDIA_API_KEY"
+#
+# See docs/deployment/openshift-deployment.md for the full install command
+# (includes --set-file flags for SQL migrations).
+
+# Default to the internal OpenShift registry.
+# If your namespace is not "wosa", override with:
+#   --set image.repository=image-registry.openshift-image-registry.svc:5000/<namespace>/wosa-backend
+#   --set frontend.image.repository=image-registry.openshift-image-registry.svc:5000/<namespace>/wosa-frontend
+image:
+  repository: image-registry.openshift-image-registry.svc:5000/wosa/wosa-backend
+
+frontend:
+  image:
+    repository: image-registry.openshift-image-registry.svc:5000/wosa/wosa-frontend
+
+# Use ClusterIP since the OpenShift Route handles external traffic.
+service:
+  type: ClusterIP
+
+# Let OpenShift assign UIDs/GIDs from the namespace range instead of
+# hard-coding values that conflict with the restricted-v2 SCC.
+securityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+# Milvus GPU acceleration (optional).
+# Uncomment and adjust tolerations to match your GPU node taints.
+# To find your taint keys: oc describe node <gpu-node> | grep -A5 Taints
+milvus:
+  gpu:
+    enabled: false
+    # tolerations:
+    #   - key: "nvidia.com/gpu"
+    #     operator: Exists
+    #     effect: NoSchedule
+
+openshift:
+  enabled: true
+  route:
+    enabled: true
+    # Set to the desired FQDN for the application, e.g.:
+    #   wosa.apps.your-cluster.example.com
+    # Leave empty for auto-generated hostname.
+    host: ""
+    tls:
+      termination: edge
+      insecureEdgeTerminationPolicy: Redirect
+    timeout: "5m"
+  scc:
+    create: false
+    priority: 10
+  imageRegistryPull: true

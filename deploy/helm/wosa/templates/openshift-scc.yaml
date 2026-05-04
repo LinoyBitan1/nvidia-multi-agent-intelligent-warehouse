@@ -1,0 +1,75 @@
+{{- if and .Values.openshift.enabled .Values.openshift.scc.create }}
+# Custom SecurityContextConstraints for WOSA pods.
+#
+# The default restricted-v2 SCC is sufficient for most WOSA components.
+# This SCC is only needed when specific pods require additional capabilities
+# (e.g., Milvus GPU mode or custom init containers).
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  name: {{ include "wosa.fullname" . }}
+  labels:
+    {{- include "wosa.labels" . | nindent 4 }}
+  annotations:
+    kubernetes.io/description: >-
+      SCC for WOSA pods that require capabilities beyond restricted-v2.
+priority: {{ .Values.openshift.scc.priority }}
+allowPrivilegedContainer: false
+allowPrivilegeEscalation: false
+allowHostDirVolumePlugin: false
+allowHostNetwork: false
+allowHostPorts: false
+allowHostPID: false
+allowHostIPC: false
+allowedCapabilities: []
+defaultAddCapabilities: []
+requiredDropCapabilities:
+  - ALL
+runAsUser:
+  type: MustRunAsRange
+seLinuxContext:
+  type: MustRunAs
+fsGroup:
+  type: MustRunAs
+supplementalGroups:
+  type: RunAsAny
+volumes:
+  - configMap
+  - downwardAPI
+  - emptyDir
+  - persistentVolumeClaim
+  - projected
+  - secret
+readOnlyRootFilesystem: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "wosa.fullname" . }}-scc
+  labels:
+    {{- include "wosa.labels" . | nindent 4 }}
+rules:
+  - apiGroups:
+      - security.openshift.io
+    resources:
+      - securitycontextconstraints
+    resourceNames:
+      - {{ include "wosa.fullname" . }}
+    verbs:
+      - use
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "wosa.fullname" . }}-scc
+  labels:
+    {{- include "wosa.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "wosa.fullname" . }}-scc
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "wosa.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
