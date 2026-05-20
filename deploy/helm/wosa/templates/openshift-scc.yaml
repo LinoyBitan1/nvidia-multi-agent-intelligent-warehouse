@@ -1,75 +1,89 @@
 {{- if and .Values.openshift.enabled .Values.openshift.scc.create }}
-# Custom SecurityContextConstraints for WOSA pods.
-#
-# The default restricted-v2 SCC is sufficient for most WOSA components.
-# This SCC is only needed when specific pods require additional capabilities
-# (e.g., Milvus GPU mode or custom init containers).
+
+# Custom SCC: allows runAsUser for NIM pods and skips recursive SELinux
+# relabeling on NIM model PVCs.
 apiVersion: security.openshift.io/v1
 kind: SecurityContextConstraints
 metadata:
-  name: {{ include "wosa.fullname" . }}
+  name: {{ .Release.Name }}-nim
   labels:
-    {{- include "wosa.labels" . | nindent 4 }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
   annotations:
     kubernetes.io/description: >-
-      SCC for WOSA pods that require capabilities beyond restricted-v2.
+      Custom SCC for WOSA pods. Allows containers to run as the UID defined
+      in their images and skips recursive SELinux relabeling on volume mounts.
 priority: {{ .Values.openshift.scc.priority }}
-allowPrivilegedContainer: false
-allowPrivilegeEscalation: false
 allowHostDirVolumePlugin: false
-allowHostNetwork: false
-allowHostPorts: false
-allowHostPID: false
 allowHostIPC: false
-allowedCapabilities: []
-defaultAddCapabilities: []
-requiredDropCapabilities:
-  - ALL
-runAsUser:
-  type: MustRunAsRange
-seLinuxContext:
-  type: MustRunAs
+allowHostNetwork: false
+allowHostPID: false
+allowHostPorts: false
+allowPrivilegeEscalation: true
+allowPrivilegedContainer: false
+allowedCapabilities: null
+defaultAddCapabilities: null
 fsGroup:
-  type: MustRunAs
+  type: RunAsAny
+readOnlyRootFilesystem: false
+requiredDropCapabilities:
+  - KILL
+  - MKNOD
+  - SETUID
+  - SETGID
+runAsUser:
+  type: RunAsAny
+seLinuxContext:
+  type: RunAsAny
 supplementalGroups:
   type: RunAsAny
+users:
+  - system:serviceaccount:{{ .Release.Namespace }}:default
+  - system:serviceaccount:{{ .Release.Namespace }}:{{ include "wosa.serviceAccountName" . }}
+  - system:serviceaccount:{{ .Release.Namespace }}:nim-cache-sa
+  {{- range $nimKey, $nimVal := .Values.nimOperator }}
+  {{- if and (kindIs "map" $nimVal) (hasKey $nimVal "service") }}
+  - system:serviceaccount:{{ $.Release.Namespace }}:{{ $nimVal.service.name }}
+  {{- end }}
+  {{- end }}
 volumes:
   - configMap
+  - csi
   - downwardAPI
   - emptyDir
+  - ephemeral
   - persistentVolumeClaim
   - projected
   - secret
-readOnlyRootFilesystem: false
+
 ---
+
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: RoleBinding
 metadata:
-  name: {{ include "wosa.fullname" . }}-scc
+  name: {{ .Release.Name }}-nim-scc
+  namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "wosa.labels" . | nindent 4 }}
-rules:
-  - apiGroups:
-      - security.openshift.io
-    resources:
-      - securitycontextconstraints
-    resourceNames:
-      - {{ include "wosa.fullname" . }}
-    verbs:
-      - use
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: {{ include "wosa.fullname" . }}-scc
-  labels:
-    {{- include "wosa.labels" . | nindent 4 }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ include "wosa.fullname" . }}-scc
+  name: system:openshift:scc:{{ .Release.Name }}-nim
 subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: {{ .Release.Namespace }}
   - kind: ServiceAccount
     name: {{ include "wosa.serviceAccountName" . }}
     namespace: {{ .Release.Namespace }}
+  - kind: ServiceAccount
+    name: nim-cache-sa
+    namespace: {{ .Release.Namespace }}
+  {{- range $nimKey, $nimVal := .Values.nimOperator }}
+  {{- if and (kindIs "map" $nimVal) (hasKey $nimVal "service") }}
+  - kind: ServiceAccount
+    name: {{ $nimVal.service.name }}
+    namespace: {{ $.Release.Namespace }}
+  {{- end }}
+  {{- end }}
+
 {{- end }}

@@ -81,16 +81,20 @@ spec:
             - name: CLUSTER_ID
               value: {{ .Values.kafka.clusterId | quote }}
           volumeMounts:
+            {{- if .Values.kafka.persistence.enabled }}
             - name: data
               mountPath: /var/lib/kafka/data
+            {{- end }}
             - name: config
               mountPath: /opt/kafka/config
             - name: logs
               mountPath: /opt/kafka/logs
       volumes:
+        {{- if .Values.kafka.persistence.enabled }}
         - name: data
           persistentVolumeClaim:
             claimName: {{ include "wosa.kafka.name" . }}-data
+        {{- end }}
         # restricted-v2: image dirs are root-owned, random UID cannot write
         - name: config
           emptyDir: {}

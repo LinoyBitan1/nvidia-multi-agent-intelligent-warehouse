@@ -3,7 +3,9 @@
 # Required overrides (must be set at deploy time):
 #   secrets.nvidiaApiKey
 
-# -- Global Settings
+# ---------------------------------------------------------------------------
+# Global Settings
+# ---------------------------------------------------------------------------
 nameOverride: ""
 fullnameOverride: ""
 namespace: ""
@@ -17,13 +19,17 @@ affinity: {}
 serviceAccount:
   name: wosa-sa
 
-# -- Application Images
+# ---------------------------------------------------------------------------
+# Application Images
+# ---------------------------------------------------------------------------
 image:
   repository: ""   # REQUIRED: set to your backend image (e.g. quay.io/myorg/wosa-backend)
   tag: "latest"
   pullPolicy: Always
 
-# -- Backend
+# ---------------------------------------------------------------------------
+# Backend
+# ---------------------------------------------------------------------------
 backend:
   replicas: 1
   port: 8001
@@ -38,7 +44,7 @@ backend:
     environment: production
     # LLM
     llmNimUrl: "https://integrate.api.nvidia.com/v1"
-    llmModel: "nvidia/llama-3.3-nemotron-super-49b-v1"
+    llmModel: "nvidia/llama-3.3-nemotron-super-49b-v1.5"
     llmTemperature: "0.1"
     llmMaxTokens: "2000"
     llmTopP: "1.0"
@@ -49,7 +55,7 @@ backend:
     llmCacheTtlSeconds: "300"
     # Embedding
     embeddingNimUrl: "https://integrate.api.nvidia.com/v1"
-    embeddingModel: "nvidia/nv-embedqa-e5-v5"
+    embeddingModel: "nvidia/llama-nemotron-embed-vl-1b-v2"
     # NeMo document processing
     nemoRetrieverUrl: "https://integrate.api.nvidia.com/v1"
     nemoOcrUrl: "https://integrate.api.nvidia.com/v1"
@@ -60,7 +66,7 @@ backend:
     guardrailsTimeout: "10"
     guardrailsUseApi: "false"
     useNemoGuardrailsSdk: "false"
-    guardrailsModel: "nvidia/llama-3.3-nemotron-super-49b-v1"
+    guardrailsModel: "nvidia/llama-3.3-nemotron-super-49b-v1.5"
     # LLM Judge
     llama70bTimeout: "120"
     # Service discovery
@@ -83,7 +89,9 @@ backend:
     initialDelaySeconds: 30
     periodSeconds: 10
 
-# -- Security Contexts (restricted-v2 compatible)
+# ---------------------------------------------------------------------------
+# Security Contexts (restricted-v2 compatible)
+# ---------------------------------------------------------------------------
 securityContext:
   runAsNonRoot: true
   seccompProfile:
@@ -95,16 +103,17 @@ containerSecurityContext:
     drop:
       - ALL
 
-# -- Secrets
+# ---------------------------------------------------------------------------
+# Application secrets (converted from Docker Compose .env)
+# ---------------------------------------------------------------------------
 secrets:
-  create: true
-  nvidiaApiKey: ""          # REQUIRED
-  embeddingApiKey: ""       # defaults to nvidiaApiKey
-  railApiKey: ""            # defaults to nvidiaApiKey
-  nemoRetrieverApiKey: ""   # defaults to nvidiaApiKey
-  nemoOcrApiKey: ""         # defaults to nvidiaApiKey
-  nemoParseApiKey: ""       # defaults to nvidiaApiKey
-  llamaNanoVlApiKey: ""     # defaults to nvidiaApiKey
+  nvidiaApiKey: ""
+  embeddingApiKey: ""
+  railApiKey: ""
+  nemoRetrieverApiKey: ""
+  nemoOcrApiKey: ""
+  nemoParseApiKey: ""
+  llamaNanoVlApiKey: ""
   defaultUserPassword: "changeme"
   jwtSecretKey: "your-strong-random-secret-minimum-32-characters-change-this-in-production"
   postgresUser: "warehouse"
@@ -113,9 +122,11 @@ secrets:
   minioAccessKey: "minioadmin"
   minioSecretKey: "minioadmin"
 
-# -- Infrastructure Services
+# ---------------------------------------------------------------------------
+# Infrastructure Services
+# ---------------------------------------------------------------------------
 
-# -- TimescaleDB
+# TimescaleDB
 timescaledb:
   enabled: true
   replicas: 1
@@ -135,7 +146,7 @@ timescaledb:
       cpu: "1"
       memory: "2Gi"
 
-# -- Redis
+# Redis
 redis:
   enabled: true
   replicas: 1
@@ -155,7 +166,7 @@ redis:
       cpu: "500m"
       memory: "512Mi"
 
-# -- Kafka
+# Kafka
 kafka:
   enabled: true
   replicas: 1
@@ -176,7 +187,7 @@ kafka:
       cpu: "1"
       memory: "2Gi"
 
-# -- etcd
+# etcd
 etcd:
   enabled: true
   replicas: 1
@@ -196,7 +207,7 @@ etcd:
       cpu: "500m"
       memory: "512Mi"
 
-# -- MinIO
+# MinIO
 minio:
   enabled: true
   replicas: 1
@@ -218,7 +229,7 @@ minio:
       cpu: "1"
       memory: "2Gi"
 
-# -- Milvus
+# Milvus
 milvus:
   enabled: true
   replicas: 1
@@ -231,7 +242,6 @@ milvus:
   persistence:
     enabled: true
     size: 10Gi
-  # GPU acceleration (requires NVIDIA GPU node)
   gpu:
     enabled: false
     deviceId: "0"
@@ -244,9 +254,10 @@ milvus:
       cpu: "2"
       memory: "4Gi"
 
-# -- Frontend & Routing
+# ---------------------------------------------------------------------------
+# Frontend & Routing
+# ---------------------------------------------------------------------------
 
-# -- Ingress (vanilla Kubernetes)
 ingress:
   enabled: false
   className: ""
@@ -254,12 +265,10 @@ ingress:
   hosts: []
   tls: []
 
-# -- Service type for nginx (use LoadBalancer or NodePort on vanilla k8s,
-#    ClusterIP when using ingress or OpenShift Route)
 service:
   type: ClusterIP
 
-# -- Frontend
+# Frontend
 frontend:
   enabled: true
   replicas: 1
@@ -281,7 +290,7 @@ frontend:
       cpu: "200m"
       memory: "128Mi"
 
-# -- Nginx
+# Nginx
 nginx:
   enabled: true
   replicas: 1
@@ -299,35 +308,31 @@ nginx:
       cpu: "200m"
       memory: "128Mi"
 
-# -- Network Policy
+# ---------------------------------------------------------------------------
+# Network Policy
+# ---------------------------------------------------------------------------
 networkPolicy:
   enabled: true
 
-# -- Helm Hook Jobs
+# ---------------------------------------------------------------------------
+# Helm Hook Jobs
+# ---------------------------------------------------------------------------
 
-# -- DB init Job (post-install/post-upgrade Helm hook)
-# SQL files are copied from the backend image automatically — no --set-file flags needed.
 dbInit:
   enabled: true
 
-# -- User init Job (post-install Helm hook)
-# Runs scripts/setup/create_default_users.py to create admin + test user.
 userInit:
   enabled: true
 
-# -- Demo data Job (post-install only Helm hook)
-# Runs scripts/data/quick_demo_data.py to seed inventory, tasks, incidents.
-# Set enabled: false to skip (e.g. production with real data).
 demoData:
   enabled: false
 
-# -- Demand history Job (post-install only Helm hook)
-# Runs scripts/data/generate_historical_demand.py to seed 180 days of demand
-# data for the Forecasting page.
 demoDemand:
   enabled: false
 
-# -- Monitoring
+# ---------------------------------------------------------------------------
+# Monitoring
+# ---------------------------------------------------------------------------
 monitoring:
   enabled: false
 
@@ -392,13 +397,110 @@ monitoring:
     dashboards:
       enabled: true
 
-# -- OpenShift-specific configuration.  Enable these when deploying on
-#    Red Hat OpenShift instead of vanilla Kubernetes.
+# ---------------------------------------------------------------------------
+# NIM Operator integration (disabled by default).
+# When enabled AND the NIM Operator CRD is present on the cluster, NIMCache +
+# NIMService resources are created for self-hosted LLM and embedding inference
+# instead of using the hosted NVIDIA API (integrate.api.nvidia.com).
+# Disable the hosted API endpoints by setting nimOperator.<nim>.enabled: true
+# in your overlay to avoid running both paths.
+# ---------------------------------------------------------------------------
+nimOperator:
+  llm:
+    enabled: false
+    replicas: 1
+    service:
+      name: "nim-llm"
+    image:
+      repository: nvcr.io/nim/nvidia/llama-3.3-nemotron-super-49b-v1.5
+      tag: "latest"
+      pullPolicy: Always
+    resources:
+      limits:
+        nvidia.com/gpu: 2
+      requests:
+        nvidia.com/gpu: 2
+    storage:
+      pvc:
+        create: true
+        size: "100Gi"
+        volumeAccessMode: ReadWriteOnce
+        storageClass: ""
+    nodeSelector: {}
+    tolerations: []
+    env:
+      - name: NIM_HTTP_API_PORT
+        value: "8000"
+      - name: TOKENIZERS_PARALLELISM
+        value: "false"
+    expose:
+      service:
+        name: http
+        type: ClusterIP
+        port: 8000
+    startupProbe:
+      enabled: true
+      probe:
+        httpGet:
+          path: /v1/health/ready
+          port: 8000
+        initialDelaySeconds: 60
+        periodSeconds: 30
+        failureThreshold: 120
+
+  embedding:
+    enabled: false
+    replicas: 1
+    service:
+      name: "nim-embedding"
+    image:
+      repository: nvcr.io/nim/nvidia/llama-nemotron-embed-vl-1b-v2
+      tag: "1.12.0"
+      pullPolicy: Always
+    resources:
+      limits:
+        nvidia.com/gpu: 1
+      requests:
+        nvidia.com/gpu: 1
+    storage:
+      pvc:
+        create: true
+        size: "50Gi"
+        volumeAccessMode: ReadWriteOnce
+        storageClass: ""
+    nodeSelector: {}
+    tolerations: []
+    env:
+      - name: NIM_HTTP_API_PORT
+        value: "8000"
+      - name: TOKENIZERS_PARALLELISM
+        value: "false"
+    expose:
+      service:
+        name: http
+        type: ClusterIP
+        port: 8000
+    startupProbe:
+      enabled: true
+      probe:
+        httpGet:
+          path: /v1/health/ready
+          port: 8000
+        initialDelaySeconds: 60
+        periodSeconds: 30
+        failureThreshold: 120
+
+# ---------------------------------------------------------------------------
+# OpenShift support (disabled by default — zero impact on vanilla Kubernetes)
+# ---------------------------------------------------------------------------
 openshift:
   enabled: false
-
-  # Create an OpenShift Route for external access via the nginx gateway.
-  # When enabled, consider switching service.type to ClusterIP.
+  ngcSecret:
+    name: "ngc-secret"
+    apiName: "ngc-api"
+    registry: "nvcr.io"
+    username: "$oauthtoken"
+    password: ""
   route:
     enabled: false
     host: ""
@@ -407,15 +509,7 @@ openshift:
       insecureEdgeTerminationPolicy: Redirect
     timeout: "5m"
     annotations: {}
-
-  # SecurityContextConstraints.
-  # Only needed if pods require capabilities beyond the default restricted-v2
-  # SCC (e.g., for Milvus GPU mode or custom init containers).
   scc:
     create: false
-    # Priority relative to other SCCs (higher = preferred).
     priority: 10
-
-  # Grant the service account permission to pull images from the internal
-  # OpenShift image registry.
   imageRegistryPull: false

@@ -113,9 +113,17 @@ spec:
             - name: ENVIRONMENT
               value: {{ .Values.backend.env.environment | quote }}
             - name: LLM_NIM_URL
+              {{- if .Values.nimOperator.llm.enabled }}
+              value: "http://{{ .Values.nimOperator.llm.service.name }}.{{ include "wosa.namespace" . }}.svc.cluster.local:{{ .Values.nimOperator.llm.expose.service.port }}/v1"
+              {{- else }}
               value: {{ .Values.backend.env.llmNimUrl | quote }}
+              {{- end }}
             - name: LLM_MODEL
+              {{- if .Values.nimOperator.llm.enabled }}
+              value: {{ trimPrefix "nvcr.io/nim/" .Values.nimOperator.llm.image.repository | quote }}
+              {{- else }}
               value: {{ .Values.backend.env.llmModel | quote }}
+              {{- end }}
             - name: LLM_TEMPERATURE
               value: {{ .Values.backend.env.llmTemperature | quote }}
             - name: LLM_MAX_TOKENS
@@ -133,9 +141,17 @@ spec:
             - name: LLM_CACHE_TTL_SECONDS
               value: {{ .Values.backend.env.llmCacheTtlSeconds | quote }}
             - name: EMBEDDING_NIM_URL
+              {{- if .Values.nimOperator.embedding.enabled }}
+              value: "http://{{ .Values.nimOperator.embedding.service.name }}.{{ include "wosa.namespace" . }}.svc.cluster.local:{{ .Values.nimOperator.embedding.expose.service.port }}/v1"
+              {{- else }}
               value: {{ .Values.backend.env.embeddingNimUrl | quote }}
+              {{- end }}
             - name: RAIL_API_URL
+              {{- if .Values.nimOperator.llm.enabled }}
+              value: "http://{{ .Values.nimOperator.llm.service.name }}.{{ include "wosa.namespace" . }}.svc.cluster.local:{{ .Values.nimOperator.llm.expose.service.port }}/v1"
+              {{- else }}
               value: {{ .Values.backend.env.railApiUrl | quote }}
+              {{- end }}
             - name: CORS_ORIGINS
               {{- if .Values.backend.env.corsOrigins }}
               value: {{ .Values.backend.env.corsOrigins | quote }}
