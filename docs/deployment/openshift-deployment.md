@@ -44,10 +44,10 @@ service is managed as a pair of custom resources:
 | VRAM | 80 GB+ per GPU (LLM requires 2× A100 80GB or H100) |
 | CPU | 10+ cores across worker nodes |
 | RAM | 32 GB+ |
-| Storage | 150 GiB dynamically provisioned PVCs (100 GiB LLM + 50 GiB embedding) + 38 GiB for infrastructure PVCs |
+| Storage | 638 GiB dynamically provisioned PVCs (500 GiB LLM + 100 GiB embedding) + 38 GiB for infrastructure PVCs |
 | API keys | [NGC API key](https://org.ngc.nvidia.com/setup/api-keys) |
 
-Minimum for reproduction: 3 × NVIDIA A100 80GB / H100 GPUs, 188 GiB storage. Add 1 GPU if `milvus.gpu.enabled=true`.
+Minimum for reproduction: 3 × NVIDIA A100 80GB / H100 GPUs, 638 GiB storage. Add 1 GPU if `milvus.gpu.enabled=true`.
 
 ## What's Different from Upstream
 
@@ -70,7 +70,7 @@ All OpenShift customizations are in the `deploy/` folder. The upstream codebase 
 
 - **`Dockerfile.backend-openshift`**, **`Dockerfile.frontend-openshift`** — OpenShift-compatible container images (non-root, no bind mounts).
 - **`deploy/helm/wosa/`** — Full Helm chart: deployment templates for all services, hook jobs, monitoring, network policies, secrets, PVCs, OpenShift Route and SCC, NIMCache + NIMService templates for LLM and embedding (gated by `apps.nvidia.com/v1alpha1`), and conditional NIM URL resolution in the backend.
-- **Source code changes** — Env var fallbacks (`PGHOST`, `PGPORT`, `REDIS_HOST`, `FORECAST_OUTPUT_DIR`) in 6 Python files, preserving original defaults.
+- **Source code changes** — Env var fallbacks (`PGHOST`, `PGPORT`, `REDIS_HOST`, `FORECAST_OUTPUT_DIR`) in 6 Python files, and configurable agent/graph/chat timeouts (`AGENT_TIMEOUT_SIMPLE`, `GRAPH_TIMEOUT_COMPLEX`, etc.) in 2 Python files. All changes preserve original defaults.
 
 ## Prerequisites
 
@@ -131,7 +131,7 @@ Each NIM (`llm`, `embedding`) has the same schema:
 | `image.repository` | (per NIM) | NGC container image |
 | `image.tag` | (per NIM) | Image version |
 | `resources.limits.nvidia.com/gpu` | `2` (LLM) / `1` (embedding) | GPU allocation |
-| `storage.pvc.size` | `50–100Gi` | Model cache PVC size |
+| `storage.pvc.size` | `500Gi` (LLM) / `100Gi` (embedding) | Model cache PVC size |
 | `storage.pvc.storageClass` | `""` | StorageClass (uses cluster default if empty) |
 | `expose.service.port` | `8000` | Service port |
 | `tolerations` | `[]` | Node tolerations for GPU taints |

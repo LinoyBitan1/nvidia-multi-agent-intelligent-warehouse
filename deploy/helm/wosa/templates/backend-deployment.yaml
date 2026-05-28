@@ -195,6 +195,35 @@ spec:
               value: {{ .Values.backend.env.embeddingModel | quote }}
             - name: LLAMA_70B_TIMEOUT
               value: {{ .Values.backend.env.llama70bTimeout | quote }}
+            # --- Agent/graph timeouts (override for self-hosted NIM) ---
+            {{- with .Values.backend.env.agentTimeoutSimple }}
+            - name: AGENT_TIMEOUT_SIMPLE
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.backend.env.agentTimeoutComplex }}
+            - name: AGENT_TIMEOUT_COMPLEX
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.backend.env.agentTimeoutReasoning }}
+            - name: AGENT_TIMEOUT_REASONING
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.backend.env.graphTimeoutSimple }}
+            - name: GRAPH_TIMEOUT_SIMPLE
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.backend.env.graphTimeoutComplex }}
+            - name: GRAPH_TIMEOUT_COMPLEX
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.backend.env.chatTimeoutSimple }}
+            - name: CHAT_TIMEOUT_SIMPLE
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.backend.env.chatTimeoutComplex }}
+            - name: CHAT_TIMEOUT_COMPLEX
+              value: {{ . | quote }}
+            {{- end }}
             # --- Secrets ---
             - name: NVIDIA_API_KEY
               valueFrom:

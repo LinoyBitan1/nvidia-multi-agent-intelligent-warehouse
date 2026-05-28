@@ -42,6 +42,21 @@ service:
   type: ClusterIP
 
 # ---------------------------------------------------------------------------
+# Backend timeout overrides for self-hosted NIM inference
+# Self-hosted models have higher latency than the hosted NVIDIA API;
+# increase agent/graph/chat timeouts to prevent premature timeouts.
+# ---------------------------------------------------------------------------
+backend:
+  env:
+    agentTimeoutSimple: "90"
+    agentTimeoutComplex: "120"
+    agentTimeoutReasoning: "180"
+    graphTimeoutSimple: "120"
+    graphTimeoutComplex: "180"
+    chatTimeoutSimple: "120"
+    chatTimeoutComplex: "180"
+
+# ---------------------------------------------------------------------------
 # NIM Operator integration — deploys LLM and embedding NIMs via NIMCache +
 # NIMService.  The NIM Operator handles model downloading, caching, and GPU
 # scheduling.
@@ -65,7 +80,7 @@ nimOperator:
     storage:
       pvc:
         create: true
-        size: "100Gi"
+        size: "500Gi"
         volumeAccessMode: ReadWriteOnce
         storageClass: ""
     nodeSelector: {}
@@ -115,7 +130,7 @@ nimOperator:
     storage:
       pvc:
         create: true
-        size: "50Gi"
+        size: "100Gi"
         volumeAccessMode: ReadWriteOnce
         storageClass: ""
     nodeSelector: {}

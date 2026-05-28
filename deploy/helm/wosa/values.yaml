@@ -423,7 +423,7 @@ nimOperator:
     storage:
       pvc:
         create: true
-        size: "100Gi"
+        size: "500Gi"
         volumeAccessMode: ReadWriteOnce
         storageClass: ""
     nodeSelector: {}
@@ -465,7 +465,7 @@ nimOperator:
     storage:
       pvc:
         create: true
-        size: "50Gi"
+        size: "100Gi"
         volumeAccessMode: ReadWriteOnce
         storageClass: ""
     nodeSelector: {}
