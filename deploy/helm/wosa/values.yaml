@@ -415,6 +415,10 @@ nimOperator:
       repository: nvcr.io/nim/nvidia/llama-3.3-nemotron-super-49b-v1.5
       tag: "latest"
       pullPolicy: Always
+    model:
+      precision: ""
+      tensorParallelism: ""
+      profile: ""
     resources:
       limits:
         nvidia.com/gpu: 2

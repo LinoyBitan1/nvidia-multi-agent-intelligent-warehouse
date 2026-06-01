@@ -72,6 +72,12 @@ nimOperator:
       repository: nvcr.io/nim/nvidia/llama-3.3-nemotron-super-49b-v1.5
       tag: "latest"
       pullPolicy: Always
+    # Filter NIMCache downloads by precision/tensorParallelism to reduce download time.
+    # After NIMCache is Ready, set profile to pin the NIMService to the cached profile.
+    model:
+      precision: ""
+      tensorParallelism: ""
+      profile: ""
     resources:
       limits:
         nvidia.com/gpu: 2

@@ -49,6 +49,17 @@ service is managed as a pair of custom resources:
 
 Minimum for reproduction: 3 × NVIDIA A100 80GB / H100 GPUs, 638 GiB storage. Add 1 GPU if `milvus.gpu.enabled=true`.
 
+> **Smaller GPUs (e.g. A100-40GB):** Set `nimOperator.llm.model.precision` and
+> `nimOperator.llm.model.tensorParallelism` to fit the available VRAM (e.g.
+> `precision=nvfp4`, `tensorParallelism=2` for A100-40GB). After the NIMCache is Ready,
+> run `oc get nimcache nim-llm-cache -n $NAMESPACE -o jsonpath='{.status.profiles[0].name}'`
+> and pass the result as `nimOperator.llm.model.profile` via `helm upgrade`.
+
+> **Tip:** Always set `nimOperator.llm.model.precision` and
+> `nimOperator.llm.model.tensorParallelism` even on recommended hardware (e.g.
+> `precision=bf16`, `tensorParallelism=2` for A100-80GB / H100). Without filtering,
+> the NIMCache downloads all 24 model profiles (~2.4 TB), which can take several hours.
+
 ## What's Different from Upstream
 
 | Area | Upstream Default | OpenShift Deployment | Impact |
@@ -130,6 +141,9 @@ Each NIM (`llm`, `embedding`) has the same schema:
 | `service.name` | (per NIM) | Kubernetes service name (used for DNS) |
 | `image.repository` | (per NIM) | NGC container image |
 | `image.tag` | (per NIM) | Image version |
+| `model.precision` | `""` | Filter NIMCache downloads by precision (e.g. `nvfp4`, `fp8`) |
+| `model.tensorParallelism` | `""` | Filter NIMCache downloads by tensor parallelism (e.g. `2`, `4`) |
+| `model.profile` | `""` | Pin NIMService to a specific cached profile hash |
 | `resources.limits.nvidia.com/gpu` | `2` (LLM) / `1` (embedding) | GPU allocation |
 | `storage.pvc.size` | `500Gi` (LLM) / `100Gi` (embedding) | Model cache PVC size |
 | `storage.pvc.storageClass` | `""` | StorageClass (uses cluster default if empty) |
@@ -238,8 +252,9 @@ This creates:
 
 ### 4. Monitor Model Downloads
 
-NIMCache resources download models from NGC. This can take 10-60 minutes depending
-on model size and network speed.
+NIMCache resources download models from NGC. With `model.precision` and
+`model.tensorParallelism` filtering, downloads take ~10 minutes. Without filtering,
+all 24 profiles (~2.4 TB) are downloaded, which can take several hours.
 
 ```bash
 oc get nimcache -n $NAMESPACE -w
@@ -461,5 +476,5 @@ If monitoring was enabled:
 oc delete grafanas,grafanadatasources,grafanadashboards --all -n $NAMESPACE --ignore-not-found
 oc delete subscription grafana-operator -n $NAMESPACE --ignore-not-found
 oc get csv -n $NAMESPACE -o name | grep grafana-operator | xargs -r oc delete -n $NAMESPACE --ignore-not-found
-oc delete clusterrolebinding wosa-grafana-monitoring-view --ignore-not-found
+oc delete clusterrolebinding wosa-${NAMESPACE}-grafana-monitoring-view --ignore-not-found
 ```

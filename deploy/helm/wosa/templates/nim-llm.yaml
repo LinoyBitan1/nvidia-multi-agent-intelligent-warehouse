@@ -12,6 +12,15 @@ spec:
       modelPuller: "{{ $nim.image.repository }}:{{ $nim.image.tag }}"
       pullSecret: {{ .Values.openshift.ngcSecret.name }}
       authSecret: {{ .Values.openshift.ngcSecret.apiName }}
+      {{- if or $nim.model.precision $nim.model.tensorParallelism }}
+      model:
+        {{- if $nim.model.precision }}
+        precision: "{{ $nim.model.precision }}"
+        {{- end }}
+        {{- if $nim.model.tensorParallelism }}
+        tensorParallelism: "{{ $nim.model.tensorParallelism }}"
+        {{- end }}
+      {{- end }}
   storage:
     pvc:
       create: {{ $nim.storage.pvc.create | default true }}
@@ -40,6 +49,9 @@ spec:
   storage:
     nimCache:
       name: {{ $nim.service.name }}-cache
+      {{- if $nim.model.profile }}
+      profile: {{ $nim.model.profile | quote }}
+      {{- end }}
   replicas: {{ $nim.replicas | default 1 }}
   resources:
 {{ toYaml $nim.resources | nindent 4 }}
