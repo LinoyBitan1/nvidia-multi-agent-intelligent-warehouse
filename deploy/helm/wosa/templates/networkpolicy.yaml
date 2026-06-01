@@ -81,6 +81,9 @@ spec:
         - podSelector:
             matchLabels:
               {{- include "wosa.selectorLabels" . | nindent 14 }}
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/managed-by: k8s-nim-operator
     # Allow external HTTPS (port 443) for NVIDIA cloud API calls
     - to:
         - ipBlock:

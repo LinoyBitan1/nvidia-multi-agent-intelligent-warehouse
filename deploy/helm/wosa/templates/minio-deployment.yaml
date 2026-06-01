@@ -70,9 +70,11 @@ spec:
                 secretKeyRef:
                   name: {{ include "wosa.secret.name" . }}
                   key: minio-secret-key
+          {{- if .Values.minio.persistence.enabled }}
           volumeMounts:
             - name: data
               mountPath: /data
+          {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -85,10 +87,12 @@ spec:
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- if .Values.minio.persistence.enabled }}
       volumes:
         - name: data
           persistentVolumeClaim:
             claimName: {{ include "wosa.minio.name" . }}-data
+      {{- end }}
 ---
 apiVersion: v1
 kind: Service

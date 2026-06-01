@@ -137,12 +137,3 @@ Secret name
 {{- printf "%s-secrets" (include "wosa.fullname" .) }}
 {{- end }}
 
-{{/*
-Helper: resolve a secret value - use the provided key's value, falling back to nvidiaApiKey.
-Usage: {{ include "wosa.apiKeyOrDefault" (list .Values.secrets.someKey .Values.secrets.nvidiaApiKey) }}
-*/}}
-{{- define "wosa.apiKeyOrDefault" -}}
-{{- $val := index . 0 -}}
-{{- $default := index . 1 -}}
-{{- if $val -}}{{- $val -}}{{- else -}}{{- $default -}}{{- end -}}
-{{- end }}

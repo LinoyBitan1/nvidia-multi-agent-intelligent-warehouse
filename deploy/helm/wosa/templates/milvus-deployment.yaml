@@ -140,17 +140,17 @@ spec:
               value: "/var/lib/milvus/rdb_data"
             - name: COMMON_STORAGEROOTPATH
               value: "/var/lib/milvus/data"
+          {{- if .Values.milvus.persistence.enabled }}
           volumeMounts:
             - name: milvus-data
               mountPath: /var/lib/milvus
+          {{- end }}
+      {{- if .Values.milvus.persistence.enabled }}
       volumes:
         - name: milvus-data
-          {{- if .Values.milvus.persistence.enabled }}
           persistentVolumeClaim:
             claimName: {{ include "wosa.milvus.name" . }}-data
-          {{- else }}
-          emptyDir: {}
-          {{- end }}
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
