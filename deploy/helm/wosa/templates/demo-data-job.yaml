@@ -21,6 +21,8 @@ spec:
         {{- include "wosa.selectorLabels" . | nindent 8 }}
     spec:
       {{- include "wosa.podSecurityContext" . | nindent 6 }}
+      {{- include "wosa.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "wosa.serviceAccountName" . }}
       restartPolicy: OnFailure
       containers:
         - name: demo-data
