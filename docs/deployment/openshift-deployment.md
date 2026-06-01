@@ -49,16 +49,22 @@ service is managed as a pair of custom resources:
 
 Minimum for reproduction: 3 × NVIDIA A100 80GB / H100 GPUs, 638 GiB storage. Add 1 GPU if `milvus.gpu.enabled=true`.
 
-> **Smaller GPUs (e.g. A100-40GB):** Set `nimOperator.llm.model.precision` and
-> `nimOperator.llm.model.tensorParallelism` to fit the available VRAM (e.g.
-> `precision=nvfp4`, `tensorParallelism=2` for A100-40GB). After the NIMCache is Ready,
-> run `oc get nimcache nim-llm-cache -n $NAMESPACE -o jsonpath='{.status.profiles[0].name}'`
-> and pass the result as `nimOperator.llm.model.profile` via `helm upgrade`.
-
-> **Tip:** Always set `nimOperator.llm.model.precision` and
-> `nimOperator.llm.model.tensorParallelism` even on recommended hardware (e.g.
-> `precision=bf16`, `tensorParallelism=2` for A100-80GB / H100). Without filtering,
-> the NIMCache downloads all 24 model profiles (~2.4 TB), which can take several hours.
+> **Important — always filter NIMCache downloads.** The `values-openshift.yaml` defaults
+> to `precision=fp8`, `tensorParallelism=2` which fits L40S (48 GB), A100-80GB, and H100.
+> Without filtering, the NIMCache downloads all 24 model profiles (~2.4 TB). These large
+> sustained downloads frequently fail with network timeouts to NGC, causing the download
+> pod to restart from scratch — in practice, unfiltered downloads may **never complete**.
+> With filtering, only the matching profile is downloaded (~200 GB, ~10 minutes).
+>
+> Override for other GPUs:
+> - A100-80GB / H100 (max accuracy): `--set nimOperator.llm.model.precision=bf16`
+> - A100-40GB: `--set nimOperator.llm.model.precision=nvfp4`
+>
+> When overriding precision, wait for the NIMCache to become Ready, then pin the profile:
+> ```bash
+> oc get nimcache nim-llm-cache -n $NAMESPACE -o jsonpath='{.status.profiles[0].name}'
+> ```
+> Pass the result via `helm upgrade --set nimOperator.llm.model.profile=<hash>`.
 
 ## What's Different from Upstream
 
@@ -96,7 +102,7 @@ All OpenShift customizations are in the `deploy/` folder. The upstream codebase 
 - Red Hat OpenShift 4.14+
 - NVIDIA GPU Operator installed and configured
 - NIM Operator installed (provides `apps.nvidia.com/v1alpha1` API)
-- At least 3 GPU nodes available
+- At least 3 GPUs available (can be on 1+ nodes)
 
 ### Verify GPU Availability
 
@@ -132,7 +138,7 @@ oc describe node <gpu-node> | grep -A 5 "Allocatable"
 
 ### NIM Operator Block (`nimOperator:`)
 
-Each NIM (`llm`, `embedding`) has the same schema:
+Each NIM (`llm`, `embedding`) shares a common schema. The `model.*` keys apply to the LLM NIM only.
 
 | Key | Default | Description |
 |-----|---------|-------------|
@@ -141,9 +147,9 @@ Each NIM (`llm`, `embedding`) has the same schema:
 | `service.name` | (per NIM) | Kubernetes service name (used for DNS) |
 | `image.repository` | (per NIM) | NGC container image |
 | `image.tag` | (per NIM) | Image version |
-| `model.precision` | `""` | Filter NIMCache downloads by precision (e.g. `nvfp4`, `fp8`) |
-| `model.tensorParallelism` | `""` | Filter NIMCache downloads by tensor parallelism (e.g. `2`, `4`) |
-| `model.profile` | `""` | Pin NIMService to a specific cached profile hash |
+| `model.precision` | `"fp8"` | Filter NIMCache downloads by precision — LLM only (`bf16`, `fp8`, `nvfp4`) |
+| `model.tensorParallelism` | `"2"` | Filter NIMCache downloads by tensor parallelism — LLM only (e.g. `2`, `4`) |
+| `model.profile` | `""` | Pin NIMService to a specific cached profile hash — LLM only |
 | `resources.limits.nvidia.com/gpu` | `2` (LLM) / `1` (embedding) | GPU allocation |
 | `storage.pvc.size` | `500Gi` (LLM) / `100Gi` (embedding) | Model cache PVC size |
 | `storage.pvc.storageClass` | `""` | StorageClass (uses cluster default if empty) |
@@ -252,9 +258,9 @@ This creates:
 
 ### 4. Monitor Model Downloads
 
-NIMCache resources download models from NGC. With `model.precision` and
-`model.tensorParallelism` filtering, downloads take ~10 minutes. Without filtering,
-all 24 profiles (~2.4 TB) are downloaded, which can take several hours.
+NIMCache resources download models from NGC. The default configuration filters
+downloads to a single profile (~200 GB, ~10 minutes). See the [NIMCache filtering
+note](#tested-hardware) for details on why filtering is critical.
 
 ```bash
 oc get nimcache -n $NAMESPACE -w
@@ -337,7 +343,7 @@ Schema migrations and post-deploy setup run automatically as Helm hooks on first
 | `demo-data-job` | 2 | post-install | Seeds inventory, tasks, safety incidents, equipment telemetry |
 | `demo-demand-job` | 3 | post-install | Seeds 180 days of demand history for Forecasting |
 
-**Always enabled:** `db-init-job`, `user-init-job`.
+**Enabled by default:** `db-init-job` (`dbInit.enabled`), `user-init-job` (`userInit.enabled`).
 **Disabled by default:** `demo-data-job` (`--set demoData.enabled=true`), `demo-demand-job` (`--set demoDemand.enabled=true`).
 
 ## Monitoring
@@ -422,7 +428,7 @@ Check your taints with `oc describe node <gpu-node> | grep Taints`.
 
 **Services affected:** `advanced_forecasting.py`, `generate_historical_demand.py`, `rapids_gpu_forecasting.py`, `phase3_advanced_forecasting.py`, `rapids_forecasting_agent.py`, `phase1_phase2_forecasting_agent.py`.
 
-**Fix:** Replaced hardcoded values with environment variables (`PGHOST`, `PGPORT`, `FORECAST_OUTPUT_DIR`) while preserving the original defaults for backward compatibility.
+**Fix:** Replaced hardcoded values with environment variables (`PGHOST`, `PGPORT`, `FORECAST_OUTPUT_DIR`) while preserving the original defaults for backward compatibility. Note: `phase1_phase2_forecasting_agent.py` uses `DB_HOST`/`DB_PORT` (upstream naming); both are set in the backend deployment template.
 
 ### 5. Container Images Require OpenShift Dockerfiles
 

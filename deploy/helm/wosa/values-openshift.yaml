@@ -72,11 +72,11 @@ nimOperator:
       repository: nvcr.io/nim/nvidia/llama-3.3-nemotron-super-49b-v1.5
       tag: "latest"
       pullPolicy: Always
-    # Filter NIMCache downloads by precision/tensorParallelism to reduce download time.
-    # After NIMCache is Ready, set profile to pin the NIMService to the cached profile.
+    # Profile filter — avoids downloading all 24 profiles (~2.4 TB).
+    # fp8/tp=2 fits L40S, A100-80GB, H100. Override: bf16 (max accuracy), nvfp4 (A100-40GB).
     model:
-      precision: ""
-      tensorParallelism: ""
+      precision: "fp8"
+      tensorParallelism: "2"
       profile: ""
     resources:
       limits:
